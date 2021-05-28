@@ -1,9 +1,11 @@
+from os import path, mkdir, curdir
+from time import sleep
+import time
+import sys
+
+from PyQt5.QtGui import QIntValidator, QPixmap, QImage
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtCore import QThread
-from PyQt5.QtGui import QIntValidator
-from time import sleep
-from os import path, mkdir, curdir
-import time
 
 dir_now = path.abspath(curdir)
 
@@ -11,6 +13,7 @@ def current_milli_time(): #Функция для получения миллис
     return round(time.time() * 1000)
 
 class Ui_Form(object): #Данный класс отвечает за создание интерфейса, а также функционал кнопок
+    
     def setupUi(self, Form):
         Form.setObjectName("Form")
         Form.resize(380, 390)
@@ -23,6 +26,23 @@ class Ui_Form(object): #Данный класс отвечает за созда
         self.label_2.setGeometry(QtCore.QRect(10, 40, 201, 25))
         font = QtGui.QFont()
         font.setPointSize(8)
+         
+        
+        
+        self.label_cam = QtWidgets.QLabel(Form)
+        self.label_cam.setGeometry(QtCore.QRect(380, 10, 657, 370))
+        font_for_cam = QtGui.QFont()
+        font_for_cam.setPointSize(16)
+        self.label_cam.setFont(font_for_cam)
+        self.label_cam.setStyleSheet("")
+        self.label_cam.setTextFormat(QtCore.Qt.AutoText)
+        self.label_cam.setAlignment(QtCore.Qt.AlignCenter)
+        self.label_cam.setObjectName("label")
+        _translate = QtCore.QCoreApplication.translate
+        Form.setWindowTitle(_translate("Form", "Form"))
+        self.label_cam.setText(_translate("Form", "Label for Cam"))
+        
+        
         self.label_2.setFont(font)
         self.label_2.setLayoutDirection(QtCore.Qt.LeftToRight)
         self.label_2.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
@@ -108,7 +128,7 @@ class Ui_Form(object): #Данный класс отвечает за созда
     def retranslateUi(self, Form): #Именуем
         _translate = QtCore.QCoreApplication.translate
         Form.setWindowTitle(_translate("Form", "Face Recognition & Capture App"))
-        self.label_2.setText(_translate("Form", "Таймер снимка после обнаружения"))
+        self.label_2.setText(_translate("Form", "Таймер сна после обнаружения"))
         self.label_5.setText(_translate("Form", "Дирректория для сохранения снимков"))
         self.label_3.setText(_translate("Form", "Ширина камеры"))
         self.lineCamHeight.setText(_translate("Form", "720"))
@@ -134,8 +154,21 @@ class Ui_Form(object): #Данный класс отвечает за созда
         self.pushButtonStart.clicked.connect(lambda: self.recognition_app_start(1)) #Передаем число 1 в функцию, для последующего запуска потока
         self.pushButtonStop.clicked.connect(lambda: self.recognition_app_start(0))
         
+    def resize_form(self, width, height):
+        Form.resize(width, height)
+        Form.setMinimumSize(QtCore.QSize(width, height))
+        Form.setMaximumSize(QtCore.QSize(width, height))
+        
+    def set_pixmap(self, pixmap):
+        self.label_cam.setGeometry(QtCore.QRect(380, 10, 657, 370))
+        pixmap = pixmap.scaledToHeight(370)
+        self.label_cam.setPixmap(QPixmap(pixmap))
+        
     def recognition_app_start(self, state): #Проверяем переданные значения и запускаем поток
+        
         if state == 1:
+            self.resize_form(1047, 390)
+            
             self.state = True
             self.pushButtonStart.setEnabled(False) #Активность кнопок
             self.pushButtonStop.setEnabled(True)
@@ -148,6 +181,7 @@ class Ui_Form(object): #Данный класс отвечает за созда
             self.rec_app.start() #Стартуем
             
         else:
+            self.resize_form(380, 390)
             self.pushButtonStart.setEnabled(True) #Активность кнопок
             self.pushButtonStop.setEnabled(False)
             self.rec_app.stop()
@@ -178,11 +212,18 @@ class StartRecognition(QThread): #Новый поток запускаем cv2
         self.state = True
         QThread.__init__(self)
         
+    def img_sender(self, piximg):
+        height, width, channel = piximg.shape
+        bytesPerLine = 3 * width
+        qImg = QImage(piximg.data, width, height, bytesPerLine, QImage.Format_RGB888)
+        ui.set_pixmap(qImg)
+        
     def run(self):
         
         import os
-        import cv2
         import time
+        
+        import cv2
         
         i = 1
         
@@ -209,16 +250,22 @@ class StartRecognition(QThread): #Новый поток запускаем cv2
                 
                 for (x, y, w, h) in faces: #Это наши лица, отрисовываем квадраты
                     
+                    #if i < self.captures:
                     cv2.rectangle(img, (x, y), (x+w, y+h), (255, 255, 0), 4) #Квадрат и выбор его цвета
 
                     milli_time = current_milli_time() #Получаем миллисекунды
                     time_now = time.strftime(f"%d %B %Y %H-%M-%S-{milli_time}", time.localtime()) #Получаем дату и время
                     
                     ui.app_change_text_browser(f"[{milli_time}] Лицо обнаружено, создаю запись.")
-                    cv2.imwrite(os.path.join(path, f'{time_now} Person.jpg'), img) #Логируем (сохраняем фрейм)
+                    cv2.imwrite(os.path.join(path, f'{time_now} Person.jpg'), cv2.flip(img, 1)) #Логируем (сохраняем фрейм)
+                    
+                    img_to_send = cv2.cvtColor(cv2.flip(img, 1), cv2.COLOR_BGR2RGB)
+                    self.img_sender(img_to_send)
+                    
                     i += 1
                     
                     if i > self.captures: #Данная конструкция служит для быстрого выхода из потока при нажатии на кнопку стоп
+                        ui.app_change_text_browser(f"Лицо захвачено, задержка захвата на {self.time_sleep} с.")
                         x = 0.0
                         while x < self.time_sleep:
                             sleep(0.01)
@@ -231,7 +278,6 @@ class StartRecognition(QThread): #Новый поток запускаем cv2
             cap.release() #Свободу источнику изображения!
             cv2.destroyAllWindows() #Уничтожаем окна, я полагаю это мне нужно было для вывода изображения при дебаге
             
-            
     def stop(self): #Функция остановки потока
         self.quit()
         self.state = False
@@ -239,7 +285,9 @@ class StartRecognition(QThread): #Новый поток запускаем cv2
 
 
 if __name__ == "__main__": #Инициализация приложения
+    
     import sys
+    
     app = QtWidgets.QApplication(sys.argv)
     Form = QtWidgets.QWidget()
     ui = Ui_Form()
