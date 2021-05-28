@@ -247,9 +247,9 @@ class StartRecognition(QThread): #Новый поток запускаем cv2
                     time_now = time.strftime(f"%d %B %Y %H-%M-%S-{milli_time}", time.localtime()) #Получаем дату и время
                     
                     ui.app_change_text_browser(f"[{milli_time}] Лицо обнаружено, создаю запись.")
-                    cv2.imwrite(os.path.join(path, f'{time_now} Person.jpg'), cv2.flip(img, 1)) #Логируем (сохраняем фрейм)
+                    cv2.imwrite(os.path.join(path, f'{time_now} Person.jpg'), img) #Логируем (сохраняем фрейм)
                     
-                    img_to_send = cv2.cvtColor(cv2.flip(img, 1), cv2.COLOR_BGR2RGB)
+                    img_to_send = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
                     self.img_sender(img_to_send)
                     
                     i += 1
