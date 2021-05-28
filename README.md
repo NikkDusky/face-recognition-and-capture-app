@@ -12,7 +12,7 @@ pip install opencv-python
 
 ## About
 
-Программа для обнаружения и логирования лиц на камере.
+Программа для обнаружения и логирования лиц на камере. Также вы можете использовать OBS в качестве виртуальной камеры, для захвата лиц из различных источников. Просто установите OBS Virtualcam 2.0.5 в качестве плагина, а затем в Инструментах OBS включите виртуальную камеру.
 
 ## Screenshots
 
@@ -20,3 +20,5 @@ pip install opencv-python
 ![](screenshots/2.png)
 ![](screenshots/3.png)
 ![](screenshots/4.png)
+![](screenshots/5.png)
+![](screenshots/6.png)
