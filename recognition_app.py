@@ -26,9 +26,6 @@ class Ui_Form(object): #Данный класс отвечает за созда
         self.label_2.setGeometry(QtCore.QRect(10, 40, 201, 25))
         font = QtGui.QFont()
         font.setPointSize(8)
-         
-        
-        
         self.label_cam = QtWidgets.QLabel(Form)
         self.label_cam.setGeometry(QtCore.QRect(380, 10, 657, 370))
         font_for_cam = QtGui.QFont()
@@ -40,9 +37,7 @@ class Ui_Form(object): #Данный класс отвечает за созда
         self.label_cam.setObjectName("label")
         _translate = QtCore.QCoreApplication.translate
         Form.setWindowTitle(_translate("Form", "Form"))
-        self.label_cam.setText(_translate("Form", "Label for Cam"))
-        
-        
+        self.label_cam.setText(_translate("Form", "Последний захваченый снимок"))
         self.label_2.setFont(font)
         self.label_2.setLayoutDirection(QtCore.Qt.LeftToRight)
         self.label_2.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
@@ -114,10 +109,8 @@ class Ui_Form(object): #Данный класс отвечает за созда
         self.lineCamWidth = QtWidgets.QLineEdit(Form)
         self.lineCamWidth.setGeometry(QtCore.QRect(220, 70, 150, 25))
         self.lineCamWidth.setObjectName("lineCamWidth")
-
         self.retranslateUi(Form)
         QtCore.QMetaObject.connectSlotsByName(Form)
-        
         self.add_functions() #Регистрация функций кнопок
         self.pushButtonStop.setEnabled(False) #Отключаем кнопку
         
@@ -168,7 +161,6 @@ class Ui_Form(object): #Данный класс отвечает за созда
         
         if state == 1:
             self.resize_form(1047, 390)
-            
             self.state = True
             self.pushButtonStart.setEnabled(False) #Активность кнопок
             self.pushButtonStop.setEnabled(True)
@@ -178,12 +170,14 @@ class Ui_Form(object): #Данный класс отвечает за созда
                                                self.lineCamHeight.text(),
                                                self.lineDirectory.text(),
                                                self.lineCamID.text()) #Запуск потока и передача параметров из формы
+            
             self.rec_app.start() #Стартуем
             
         else:
             self.resize_form(380, 390)
             self.pushButtonStart.setEnabled(True) #Активность кнопок
             self.pushButtonStop.setEnabled(False)
+            
             self.rec_app.stop()
           
 class StartRecognition(QThread): #Новый поток запускаем cv2
@@ -200,6 +194,7 @@ class StartRecognition(QThread): #Новый поток запускаем cv2
         if path.exists(self.directory): #Проверка наличия дирректории
             ui.app_change_text_browser(f"Дирректория {self.directory} существует.")
             pass
+        
         else:
             ui.app_change_text_browser(f"Дирректория {self.directory} не существует.")
             ui.app_change_text_browser(f"Создаю дирректорию.")
@@ -207,8 +202,6 @@ class StartRecognition(QThread): #Новый поток запускаем cv2
             ui.app_change_text_browser(f"Дирректория создана.")
         
         self.cam_id = int(cam_id)
-        
-        
         self.state = True
         QThread.__init__(self)
         
@@ -231,9 +224,8 @@ class StartRecognition(QThread): #Новый поток запускаем cv2
         while self.state:
 
             face_cascade_db = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml") #Загружаем обученные каскады
-
+            
             cap = cv2.VideoCapture(self.cam_id) #Выбираем источник изображения
-
             cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.cam_width) #Задаем размеры источника
             cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.cam_height)
 
@@ -245,12 +237,10 @@ class StartRecognition(QThread): #Новый поток запускаем cv2
                 success, img = cap.read() #Читаем изображение
 
                 img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) #Переводим в оттенки серого
-                
                 faces = face_cascade_db.detectMultiScale(img_gray, 1.1, 19) #Детектим лица
                 
                 for (x, y, w, h) in faces: #Это наши лица, отрисовываем квадраты
                     
-                    #if i < self.captures:
                     cv2.rectangle(img, (x, y), (x+w, y+h), (255, 255, 0), 4) #Квадрат и выбор его цвета
 
                     milli_time = current_milli_time() #Получаем миллисекунды
@@ -267,12 +257,14 @@ class StartRecognition(QThread): #Новый поток запускаем cv2
                     if i > self.captures: #Данная конструкция служит для быстрого выхода из потока при нажатии на кнопку стоп
                         ui.app_change_text_browser(f"Лицо захвачено, задержка захвата на {self.time_sleep} с.")
                         x = 0.0
+                        
                         while x < self.time_sleep:
                             sleep(0.01)
                             x += 0.01
                             if self.state == False:
                                 ui.app_change_text_browser("Поток остановлен.")
                                 break
+                            
                         i = 1
 
             cap.release() #Свободу источнику изображения!
@@ -282,7 +274,6 @@ class StartRecognition(QThread): #Новый поток запускаем cv2
         self.quit()
         self.state = False
         ui.app_change_text_browser("Остановка потока.")
-
 
 if __name__ == "__main__": #Инициализация приложения
     
