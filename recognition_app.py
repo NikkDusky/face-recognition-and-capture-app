@@ -221,54 +221,62 @@ class StartRecognition(QThread): #Новый поток запускаем cv2
         i = 1
         
         ui.app_change_text_browser("Создаю поток.")
+        
+        face_cascade_db = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml") #Загружаем обученные каскады
+        
+        cap = cv2.VideoCapture(self.cam_id) #Выбираем источник изображения
+        
+        cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.cam_width) #Задаем размеры источника
+        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.cam_height)
+        path = self.directory
+        
+        ui.app_change_text_browser("Поток создан.")
+
         while self.state:
-
-            face_cascade_db = cv2.CascadeClassifier(cv2.data.haarcascades + "haarcascade_frontalface_default.xml") #Загружаем обученные каскады
-            
-            cap = cv2.VideoCapture(self.cam_id) #Выбираем источник изображения
-            cap.set(cv2.CAP_PROP_FRAME_WIDTH, self.cam_width) #Задаем размеры источника
-            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, self.cam_height)
-
-            path = self.directory
-
-            ui.app_change_text_browser("Поток создан.")
-            
-            while self.state:
-                success, img = cap.read() #Читаем изображение
-
+            success, img = cap.read() #Читаем изображение
+            if success:
                 img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY) #Переводим в оттенки серого
                 faces = face_cascade_db.detectMultiScale(img_gray, 1.1, 19) #Детектим лица
-                
-                for (x, y, w, h) in faces: #Это наши лица, отрисовываем квадраты
                     
+                for (x, y, w, h) in faces: #Это наши лица, отрисовываем квадраты
+                        
                     cv2.rectangle(img, (x, y), (x+w, y+h), (255, 255, 0), 4) #Квадрат и выбор его цвета
 
                     milli_time = current_milli_time() #Получаем миллисекунды
                     time_now = time.strftime(f"%d %B %Y %H-%M-%S-{milli_time}", time.localtime()) #Получаем дату и время
-                    
+                        
                     ui.app_change_text_browser(f"[{milli_time}] Лицо обнаружено, создаю запись.")
                     cv2.imwrite(os.path.join(path, f'{time_now} Person.jpg'), img) #Логируем (сохраняем фрейм)
-                    
+                        
                     img_to_send = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
                     self.img_sender(img_to_send)
-                    
+                        
                     i += 1
-                    
+                        
                     if i > self.captures: #Данная конструкция служит для быстрого выхода из потока при нажатии на кнопку стоп
                         ui.app_change_text_browser(f"Лицо захвачено, задержка захвата на {self.time_sleep} с.")
                         x = 0.0
-                        
+                            
                         while x < self.time_sleep:
-                            sleep(0.01)
-                            x += 0.01
+                            sleep(0.1)
+                            x += 0.1
                             if self.state == False:
                                 ui.app_change_text_browser("Поток остановлен.")
                                 break
-                            
+                      
                         i = 1
+            else:
+                ui.app_change_text_browser("Поток остановлен.")
+                ui.app_change_text_browser(f"========================\nОшибка чтения изображения.\nНомер камеры в системе {self.cam_id} не найден!\n========================")
+                self.state == False
 
-            cap.release() #Свободу источнику изображения!
-            cv2.destroyAllWindows() #Уничтожаем окна, я полагаю это мне нужно было для вывода изображения при дебаге
+                ui.resize_form(380, 390)
+                ui.pushButtonStart.setEnabled(True) #Активность кнопок
+                ui.pushButtonStop.setEnabled(False)                
+
+                break
+
+        cap.release() #Свободу источнику изображения!
             
     def stop(self): #Функция остановки потока
         self.quit()
@@ -276,9 +284,6 @@ class StartRecognition(QThread): #Новый поток запускаем cv2
         ui.app_change_text_browser("Остановка потока.")
 
 if __name__ == "__main__": #Инициализация приложения
-    
-    import sys
-    
     app = QtWidgets.QApplication(sys.argv)
     Form = QtWidgets.QWidget()
     ui = Ui_Form()
